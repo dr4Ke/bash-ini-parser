@@ -1,0 +1,56 @@
+#
+# based on http://theoldschooldevops.com/2008/02/09/bash-ini-parser/
+#
+
+function debug {
+   return #abort debug
+   echo $*
+   echo "${ini[*]}"
+   echo
+}
+
+function cfg_parser {
+    ini="$(<$1)"                # read the file
+    ini="${ini//\[/\\\[}"          # escape [
+    debug
+    ini="${ini//\]/\\\]}"          # escape ]
+    debug
+    IFS=$'\n' && ini=( ${ini} ) # convert to line-array
+    debug
+    ini=( ${ini[*]//;*/} )      # remove comments with ;
+    debug
+    ini=( ${ini[*]//#*/} )      # remove comments with ;
+    debug
+    ini=( ${ini[*]/     =/=} )  # remove tabs before =
+    debug
+    ini=( ${ini[*]/#    /} )  # remove init tabs #TODO: remove all not just one
+    debug
+    ini=( ${ini[*]/# /} )  # remove init space #TODO: remove all not just one
+    debug
+    ini=( ${ini[*]/=    /=} )   # remove tabs after =
+    debug
+    ini=( ${ini[*]/ = /=} )   # remove anything with a space around =
+    debug
+    ini=( ${ini[*]/#\\\[/\}$'\n'cfg_section_} ) # set section prefix
+    debug
+    ini=( ${ini[*]/%\\\]/ \(} )    # convert text2function (1)
+    debug
+    ini=( ${ini[*]/=/=\( } )    # convert item to array
+    debug
+    ini=( $(for ((i=0; i<${#ini[*]}; i++)); do echo "${ini[$i]} )"; done ) ) # close array parenthesis
+    debug
+    ini=( ${ini[*]/%\\ \)/ \\} ) # the multiline trick
+    debug
+    ini=( ${ini[*]/%\( \)/\(\) \{} ) # convert text2function (2)
+    debug
+    ini=( ${ini[*]/%\} \)/\}} ) # remove extra parenthesis
+    debug
+    ini[0]="" # remove first element
+    debug
+    ini[${#ini[*]}]='}'    # add the last brace
+    debug
+    eval "$(echo "${ini[*]}")" # eval the result
+    unset ini
+}
+
+# vim: filetype=sh
